@@ -1,0 +1,15 @@
+[Unit]
+Description=TOPGPS GPS poller daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=caocao
+Group=caocao
+WorkingDirectory=/home/caocao/cheling
+ExecStart=/home/caocao/cheling/.venv/bin/python -m packages.topgps.core.gps_poller
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+[Unit]
+Description=cheling unified scheduler (daily_mileage / safety_sync / waybill_sync)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=caocao
+Group=caocao
+WorkingDirectory=/home/caocao/cheling
+ExecStart=/home/caocao/cheling/.venv/bin/python -m tasks.scheduler
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
