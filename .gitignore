@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+.venv/
+env/
+venv/
+
+# Environment Variables（敏感配置，含 API 凭证与 MongoDB 连接串，严禁入库）
+.env
+.env.local
+
+# API Key（Prefect Cloud）
+Prefect cloud api key.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data & Logs
+data/
+logs/
+*.log
+
+# 本地工具与索引
+.omo/
+.codegraph/
+.codegraph
+
+# 运行时产物
+*.pid
+mileage_failed_dates.txt
+
+# Prefect 本地部署产物
+deploy/.prefect/
+
+# Backups
+backups/*.zip
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Exports
+export.csv
+
+# Token（waybill 运行时凭证，备份已存 data/）
+waybill-token.json
+waybill-token.json.bak
+notify_state.json
