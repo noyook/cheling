@@ -1,0 +1,277 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Cheling 调度触发链",
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "overview",
+        "label": "调度触发链总览",
+        "focus": [
+          "scheduler",
+          "gps_poller",
+          "daily_mileage",
+          "safety_sync",
+          "waybill_sync"
+        ]
+      },
+      {
+        "id": "mileage",
+        "label": "里程采集链路",
+        "focus": [
+          "scheduler",
+          "daily_mileage",
+          "topgps",
+          "mileage_store"
+        ],
+        "note": "每日 02:00 抓取昨日里程"
+      },
+      {
+        "id": "gps",
+        "label": "GPS 常驻链路",
+        "focus": [
+          "gps_poller",
+          "topgps",
+          "gps_store"
+        ],
+        "note": "独立守护进程，分桶写入"
+      },
+      {
+        "id": "safety",
+        "label": "安全审批联动",
+        "focus": [
+          "scheduler",
+          "safety_sync",
+          "waybill_api",
+          "waybill_sync",
+          "wecom",
+          "smartsheet"
+        ],
+        "note": "审批通过联动触发运单同步"
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "trigger",
+      "label": "统一调度 (cheling-scheduler)"
+    },
+    {
+      "id": "task",
+      "label": "采集与同步任务"
+    },
+    {
+      "id": "external",
+      "label": "外部 API"
+    },
+    {
+      "id": "persist",
+      "label": "存储与通知 (MongoDB / 产出)"
+    },
+    {
+      "id": "daemon",
+      "label": "GPS 守护 (gps-poller)",
+      "variant": "exception"
+    }
+  ],
+  "phases": [
+    {
+      "id": "trigger",
+      "label": "调度触发",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "execute",
+      "label": "任务执行与外部调用",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "persist",
+      "label": "落库与通知",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "scheduler",
+      "lane": "trigger",
+      "col": 0,
+      "type": "backend",
+      "label": "Scheduler",
+      "sublabel": "统一调度 · 常驻",
+      "tag": "cheling-scheduler"
+    },
+    {
+      "id": "daily_mileage",
+      "lane": "task",
+      "col": 1,
+      "type": "backend",
+      "label": "Daily Mileage",
+      "sublabel": "批量抓昨日"
+    },
+    {
+      "id": "safety_sync",
+      "lane": "task",
+      "col": 2,
+      "type": "security",
+      "label": "Safety Sync",
+      "sublabel": "安全检查"
+    },
+    {
+      "id": "waybill_sync",
+      "lane": "task",
+      "col": 3,
+      "type": "backend",
+      "label": "Waybill Sync",
+      "sublabel": "运单同步"
+    },
+    {
+      "id": "topgps",
+      "lane": "external",
+      "col": 2,
+      "type": "cloud",
+      "label": "TOPGPS API",
+      "sublabel": "车辆接口"
+    },
+    {
+      "id": "waybill_api",
+      "lane": "external",
+      "col": 3,
+      "type": "cloud",
+      "label": "Waybill API",
+      "sublabel": "运单 + 审批"
+    },
+    {
+      "id": "mileage_store",
+      "lane": "persist",
+      "col": 3,
+      "type": "database",
+      "label": "Mileage Store",
+      "sublabel": "vehicle_mileage"
+    },
+    {
+      "id": "gps_store",
+      "lane": "persist",
+      "col": 2,
+      "type": "database",
+      "label": "GPS Buckets",
+      "sublabel": "vehicle_gps_buckets"
+    },
+    {
+      "id": "wecom",
+      "lane": "persist",
+      "col": 4,
+      "type": "external",
+      "label": "WeCom",
+      "sublabel": "审批通知"
+    },
+    {
+      "id": "smartsheet",
+      "lane": "persist",
+      "col": 5,
+      "type": "cloud",
+      "label": "Smartsheet",
+      "sublabel": "运单台账"
+    },
+    {
+      "id": "gps_poller",
+      "lane": "daemon",
+      "col": 0,
+      "type": "backend",
+      "label": "GPS Poller",
+      "sublabel": "独立守护 · GPS",
+      "tag": "gps-poller"
+    }
+  ],
+  "edges": [
+    {
+      "id": "sch-daily",
+      "from": "scheduler",
+      "to": "daily_mileage",
+      "label": "每日 02:00",
+      "variant": "emphasis"
+    },
+    {
+      "id": "sch-safety",
+      "from": "scheduler",
+      "to": "safety_sync",
+      "label": "5/15min"
+    },
+    {
+      "id": "sch-waybill",
+      "from": "scheduler",
+      "to": "waybill_sync",
+      "label": "15min 保底",
+      "variant": "dashed"
+    },
+    {
+      "id": "daily-topgps",
+      "from": "daily_mileage",
+      "to": "topgps",
+      "label": "GetVehicleMileage",
+      "variant": "emphasis"
+    },
+    {
+      "id": "topgps-mileage",
+      "from": "topgps",
+      "to": "mileage_store",
+      "label": "写 vehicle_mileage"
+    },
+    {
+      "id": "poller-topgps",
+      "from": "gps_poller",
+      "to": "topgps",
+      "label": "GetVehicleGpsInfo",
+      "variant": "emphasis"
+    },
+    {
+      "id": "topgps-gps",
+      "from": "topgps",
+      "to": "gps_store",
+      "label": "GPS 分桶写入"
+    },
+    {
+      "id": "safety-api",
+      "from": "safety_sync",
+      "to": "waybill_api",
+      "label": "安全检查",
+      "variant": "emphasis"
+    },
+    {
+      "id": "safety-waybill",
+      "from": "safety_sync",
+      "to": "waybill_sync",
+      "label": "审批通过 → 联动",
+      "variant": "security",
+      "role": "branch"
+    },
+    {
+      "id": "waybill-api",
+      "from": "waybill_sync",
+      "to": "waybill_api",
+      "label": "同步运单",
+      "variant": "dashed"
+    },
+    {
+      "id": "waybill-smart",
+      "from": "waybill_sync",
+      "to": "smartsheet",
+      "label": "结果台账"
+    },
+    {
+      "id": "waybill-wecom",
+      "from": "waybill_sync",
+      "to": "wecom",
+      "label": "审批通知",
+      "variant": "dashed"
+    }
+  ]
+}

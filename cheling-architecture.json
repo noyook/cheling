@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Cheling Monorepo 架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [1500, 800]
+  },
+  "components": [
+    { "id": "topgps-api", "type": "external", "label": "TOPGPS API", "sublabel": "GPS/里程数据源", "pos": [80, 140], "size": [120, 44] },
+    { "id": "waybill-api", "type": "external", "label": "运单系统", "sublabel": "运单+安全检查", "pos": [80, 340], "size": [120, 44] },
+    { "id": "wecom", "type": "external", "label": "企业微信", "sublabel": "通知/智能表格", "pos": [80, 540], "size": [120, 44] },
+
+    { "id": "daily-mileage", "type": "backend", "label": "daily_mileage", "sublabel": "02:00 里程入库", "pos": [430, 140], "size": [150, 44] },
+    { "id": "safety-sync", "type": "backend", "label": "safety_sync", "sublabel": "安全检查/审批", "pos": [430, 340], "size": [150, 44] },
+    { "id": "waybill-sync", "type": "backend", "label": "waybill_sync", "sublabel": "运单同步 15min", "pos": [430, 540], "size": [150, 44] },
+
+    { "id": "mongodb", "type": "database", "label": "MongoDB", "sublabel": "TOPGPS 库", "pos": [1080, 140], "size": [120, 44], "tag": "mileage/GPS_buckets" },
+    { "id": "smartsheet", "type": "database", "label": "智能表格", "sublabel": "运单同步目标", "pos": [1080, 540], "size": [120, 44] },
+
+    { "id": "scheduler", "type": "backend", "label": "cheling-scheduler", "sublabel": "统一调度器", "pos": [660, 40], "size": [360, 44], "tag": "systemd" },
+    { "id": "gps-poller", "type": "backend", "label": "gps-poller", "sublabel": "GPS 常驻守护", "pos": [300, 620], "size": [150, 44], "tag": "systemd" }
+  ],
+  "connections": [
+    { "id": "sch-daily", "from": "scheduler", "to": "daily-mileage", "label": "每日 02:00", "fromSide": "bottom", "toSide": "top", "via": [[840, 92], [505, 92]], "labelAt": [673, 98] },
+    { "id": "sch-safety", "from": "scheduler", "to": "safety-sync", "label": "5/15min 时段", "fromSide": "left", "toSide": "top", "via": [[60, 62], [60, 200], [505, 200]], "labelAt": [100, 118] },
+    { "id": "sch-waybill", "from": "scheduler", "to": "waybill-sync", "label": "15min 保底", "fromSide": "top", "toSide": "top", "via": [[840, 20], [40, 20], [40, 530], [505, 530]] },
+    { "id": "mileage-topgps", "from": "daily-mileage", "to": "topgps-api", "label": "GetVehicleMileage", "fromSide": "left", "toSide": "right" },
+    { "id": "safety-waybill-api", "from": "safety-sync", "to": "waybill-api", "label": "安全检查", "fromSide": "left", "toSide": "right" },
+    { "id": "waybill-wecom", "from": "waybill-sync", "to": "wecom", "label": "异常通知", "variant": "dashed", "fromSide": "left", "toSide": "right" },
+    { "id": "safe-approve", "from": "safety-sync", "to": "waybill-sync", "label": "审批联动", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "labelAt": [505, 398] },
+    { "id": "mileage-mongo", "from": "daily-mileage", "to": "mongodb", "label": "里程 upsert", "fromSide": "right", "toSide": "left" },
+    { "id": "waybill-smartsheet", "from": "waybill-sync", "to": "smartsheet", "label": "运单同步", "fromSide": "right", "toSide": "left" },
+    { "id": "poller-topgps", "from": "gps-poller", "to": "topgps-api", "label": "GetVehicleGpsInfo", "variant": "emphasis", "fromSide": "right", "toSide": "top", "via": [[1260, 642], [1260, 32], [140, 32]] },
+    { "id": "poller-mongo", "from": "gps-poller", "to": "mongodb", "label": "GPS 分桶", "fromSide": "bottom", "toSide": "right", "via": [[375, 700], [1220, 700], [1220, 162]] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "外部服务", "items": ["TOPGPS API: 车辆 GPS + 里程接口", "运单系统: 分页拉取 + 安全检查", "企业微信: 消息通知 + 智能表格"] },
+    { "dot": "emerald", "title": "调度与守护", "items": ["cheling-scheduler: asyncio 常驻统一调度", "gps-poller: 独立 systemd 守护", "safety_sync 审批通过 → 联动 waybill_sync"] },
+    { "dot": "rose", "title": "数据存储", "items": ["MongoDB vehicle_mileage: 里程幂等 upsert", "MongoDB vehicle_gps_buckets: GPS 分桶", "智能表格: 运单同步目标"] }
+  ]
+}
