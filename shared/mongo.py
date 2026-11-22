@@ -25,6 +25,7 @@ MONGO_SELECT_TIMEOUT_MS = 10000
 # 集合常量
 VEHICLE_MILEAGE = "vehicle_mileage"
 VEHICLE_GPS_BUCKETS = "vehicle_gps_buckets"
+WAYBILL_SYNC = "waybill_sync"
 
 _sync_client: Optional[pymongo.MongoClient] = None
 _async_client: Optional[AsyncIOMotorClient] = None
@@ -78,6 +79,8 @@ def ensure_indexes(db: Any) -> None:
         [("plate_num", 1), ("hour", -1)], background=True
     )
     db[VEHICLE_GPS_BUCKETS].create_index([("hour", -1)], background=True)
+    # waybill_sync：唯一 bill_no（电子运单幂等 upsert 前提）
+    db[WAYBILL_SYNC].create_index([("bill_no", 1)], unique=True, background=True)
     logger.info("[MongoDB] 索引创建/确认完成")
 
 
@@ -97,11 +100,12 @@ async def ensure_indexes_async(db: Any) -> None:
         [("plate_num", 1), ("hour", -1)], background=True
     )
     await db[VEHICLE_GPS_BUCKETS].create_index([("hour", -1)], background=True)
+    await db[WAYBILL_SYNC].create_index([("bill_no", 1)], unique=True, background=True)
     logger.info("[MongoDB] 索引创建/确认完成（异步）")
 
 
 __all__ = [
     "MONGO_SELECT_TIMEOUT_MS", "VEHICLE_MILEAGE", "VEHICLE_GPS_BUCKETS",
-    "get_mongo_client", "get_async_mongo_client", "ensure_indexes",
-    "ensure_indexes_async",
+    "WAYBILL_SYNC", "get_mongo_client", "get_async_mongo_client",
+    "ensure_indexes", "ensure_indexes_async",
 ]

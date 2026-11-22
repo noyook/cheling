@@ -9,6 +9,7 @@ from packages.waybill_sync.core.config import SMARTSHEET_SHEET_ID
 from packages.waybill_sync.core.exceptions import WaybillError
 from packages.waybill_sync.core.http_client import HttpClient
 from packages.waybill_sync.core.response import ApiResponse
+from packages.waybill_sync.modules.mongo_service import save_waybills
 from packages.waybill_sync.modules.sheet_service import SheetService
 from packages.waybill_sync.modules.waybill_service import WaybillService
 from packages.waybill_sync.utils.logger import setup_logger
@@ -50,8 +51,16 @@ async def sync_waybill_data(days: int = 7) -> ApiResponse:
         total = result.data["total"]
         logger.info(f"Step 1 完成: 获取 {total} 条运单")
 
-        # Step 2: Save to smart sheet
-        logger.info("[Step 2] 保存到智能表格...")
+        # Step 2: Save to MongoDB
+        logger.info("[Step 2] 写入 MongoDB...")
+        if not waybills:
+            logger.info("无运单数据需要写入")
+        else:
+            inserted, modified = await asyncio.to_thread(save_waybills, waybills)
+            logger.info(f"Step 2 完成: 新增 {inserted} 条，更新 {modified} 条")
+
+        # Step 3: Save to smart sheet
+        logger.info("[Step 3] 保存到智能表格...")
         if not waybills:
             logger.info("无运单数据需要保存")
         else:
@@ -60,7 +69,7 @@ async def sync_waybill_data(days: int = 7) -> ApiResponse:
             sync_result = await sheet_service.sync_records(SMARTSHEET_SHEET_ID, waybills)
             if sync_result.success:
                 added = sync_result.data["added"]
-                logger.info(f"Step 2 完成: 新增 {added} 条记录")
+                logger.info(f"Step 3 完成: 新增 {added} 条记录")
             else:
                 raise WaybillError(f"保存到智能表格失败: {sync_result.error}")
 
